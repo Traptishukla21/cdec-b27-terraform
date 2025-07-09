@@ -1,0 +1,52 @@
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_instance" "web" {
+  ami           = "ami-0c7217cdde317cfec" # Ubuntu 22.04 in us-east-1
+  instance_type = "t2.micro"
+  key_name      = "your-key-name"   # Replace with your existing EC2 key pair name
+
+  user_data = <<-EOF
+              #!/bin/bash
+              apt update -y
+              apt install apache2 -y
+              echo "<h1>Hello from Terraform EC2 Web Server</h1>" > /var/www/html/index.html
+              systemctl start apache2
+              systemctl enable apache2
+              EOF
+
+  tags = {
+    Name = "SimpleStaticWebsite"
+  }
+
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
+
+  associate_public_ip_address = true
+}
+
+resource "aws_security_group" "web_sg" {
+  name        = "web-sg"
+  description = "Allow HTTP and SSH"
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
